@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AnalyzeTicketService } from "../src/analyze-ticket/analyze-ticket.service";
 import { sampleCases } from "./sample-cases";
 
-const unsafeReplyPattern = /\b(share|send|provide) your (pin|otp|password)\b/i;
+const unsafeReplyPattern = /(?<!do not\s+|never\s+|don't\s+)\b(share|send|provide) your (pin|otp|password)\b/i;
 const refundPromisePattern = /\bwe will refund\b|\bwill reverse\b/i;
 
 describe("AnalyzeTicketService", () => {

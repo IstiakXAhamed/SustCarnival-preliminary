@@ -6,9 +6,7 @@ const UNSAFE_PROMISE_PATTERNS = [
 ] as const;
 
 const UNSAFE_REQUEST_PATTERNS = [
-  /\bshare your (pin|otp|password)\b/i,
-  /\bsend your (pin|otp|password)\b/i,
-  /\bprovide your (pin|otp|password)\b/i,
+  /(?<!do not\s+|never\s+|don't\s+)\b(share|send|provide) your (pin|otp|password)\b/i,
   /\bfull card number\b/i
 ] as const;
 

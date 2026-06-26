@@ -48,7 +48,7 @@ export const classifyCase = (input: AnalyzeTicketRequest): Classification => {
   }
   if (
     input.user_type === "merchant" ||
-    containsAny(text, ["merchant", "settlement", "sales"])
+    containsAny(text, ["settlement", "settled", "settle", "sales"])
   ) {
     return {
       case_type: "merchant_settlement_delay",
@@ -61,7 +61,20 @@ export const classifyCase = (input: AnalyzeTicketRequest): Classification => {
   if (containsAny(text, ["failed", "balance deducted", "deducted", "recharge"])) {
     return { case_type: "payment_failed", reason_codes: ["payment_failed"] };
   }
-  if (containsAny(text, ["wrong", "mistake", "reverse it", "brother", "didn't get"])) {
+  if (
+    containsAny(text, [
+      "wrong number",
+      "wrong recipient",
+      "wrong person",
+      "wrong account",
+      "wrong send",
+      "wrong transfer",
+      "mistake",
+      "reverse it",
+      "brother",
+      "didn't get"
+    ])
+  ) {
     return { case_type: "wrong_transfer", reason_codes: ["wrong_transfer_claim"] };
   }
   if (containsAny(text, ["refund", "money back", "changed my mind"])) {

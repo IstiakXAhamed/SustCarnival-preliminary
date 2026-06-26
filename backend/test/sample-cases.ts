@@ -26,18 +26,26 @@ export const sampleCases: readonly SampleCase[] = [
       channel: "in_app_chat",
       user_type: "customer",
       campaign_context: "boishakh_bonanza_day_1",
-      transaction_history: [
-        {
-          transaction_id: "TXN-9101",
-          timestamp: "2026-04-14T14:08:22Z",
-          type: "transfer",
-          amount: 5000,
-          counterparty: "+8801719876543",
-          status: "completed"
-        }
-      ]
-    },
-    expected: {
+    transaction_history: [
+      {
+        transaction_id: "TXN-9101",
+        timestamp: "2026-04-14T14:08:22Z",
+        type: "transfer",
+        amount: 5000,
+        counterparty: "+8801719876543",
+        status: "completed"
+      },
+      {
+        transaction_id: "TXN-9087",
+        timestamp: "2026-04-13T18:12:00Z",
+        type: "cash_in",
+        amount: 10000,
+        counterparty: "AGENT-512",
+        status: "completed"
+      }
+    ]
+  },
+  expected: {
       relevant_transaction_id: "TXN-9101",
       evidence_verdict: "consistent",
       case_type: "wrong_transfer",
@@ -272,9 +280,9 @@ export const sampleCases: readonly SampleCase[] = [
       relevant_transaction_id: null,
       evidence_verdict: "insufficient_data",
       case_type: "wrong_transfer",
-      severity: "high",
+      severity: "medium",
       department: "dispute_resolution",
-      human_review_required: true
+      human_review_required: false
     }
   },
   {

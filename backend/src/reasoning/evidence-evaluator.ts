@@ -46,6 +46,6 @@ export const evaluateEvidence = (
     case "agent_cash_in_issue":
       return transaction.status === "pending" ? "consistent" : "inconsistent";
     case "other":
-      return "insufficient_data";
+      return "consistent";
   }
 };

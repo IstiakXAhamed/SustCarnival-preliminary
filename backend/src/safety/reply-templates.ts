@@ -61,6 +61,9 @@ const buildBanglaReply = (input: ReplyInput): string => {
 };
 
 export const buildAgentSummary = (input: ReplyInput): string => {
+  if (input.case_type === "phishing_or_social_engineering") {
+    return "Customer reports a suspicious contact attempt (call/SMS) asking for credentials. Likely social engineering. Customer has not yet shared credentials. Escalate to fraud_risk immediately.";
+  }
   const amount =
     input.transaction === null ? "" : ` ${input.transaction.amount} BDT`;
   const tx =
@@ -71,6 +74,9 @@ export const buildAgentSummary = (input: ReplyInput): string => {
 };
 
 export const buildNextAction = (input: ReplyInput): string => {
+  if (input.case_type === "phishing_or_social_engineering") {
+    return "Escalate to fraud_risk team immediately. Confirm to the customer that the company never asks for OTP, PIN, or passwords. Log the reported number for fraud pattern analysis.";
+  }
   if (input.evidence_verdict === "insufficient_data") {
     return "Ask for the missing transaction details before initiating any financial action.";
   }
@@ -90,8 +96,6 @@ export const buildNextAction = (input: ReplyInput): string => {
       return "Route to merchant operations to verify settlement batch status and communicate an official update.";
     case "agent_cash_in_issue":
       return "Route to agent operations to verify the pending cash-in and settlement state.";
-    case "phishing_or_social_engineering":
-      return "Escalate to fraud risk and remind the customer never to share credentials.";
     case "other":
       return "Ask the customer for specific transaction details and issue description.";
   }

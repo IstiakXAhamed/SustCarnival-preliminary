@@ -57,26 +57,20 @@ export const classifyCase = (input: AnalyzeTicketRequest): Classification => {
   ) {
     return { case_type: "duplicate_payment", reason_codes: ["duplicate_payment"] };
   }
-  if (
-    input.user_type === "merchant" ||
-    containsAny(text, MERCHANT_SETTLEMENT_KEYWORDS)
-  ) {
-    return {
-      case_type: "merchant_settlement_delay",
-      reason_codes: ["merchant_settlement"]
-    };
-  }
-  if (
-    input.user_type === "agent" ||
-    containsAny(text, AGENT_CASH_IN_KEYWORDS)
-  ) {
-    return { case_type: "agent_cash_in_issue", reason_codes: ["agent_cash_in"] };
-  }
   if (containsAny(text, PAYMENT_FAILED_KEYWORDS)) {
     return { case_type: "payment_failed", reason_codes: ["payment_failed"] };
   }
   if (containsAny(text, WRONG_TRANSFER_KEYWORDS)) {
     return { case_type: "wrong_transfer", reason_codes: ["wrong_transfer_claim"] };
+  }
+  if (containsAny(text, MERCHANT_SETTLEMENT_KEYWORDS)) {
+    return {
+      case_type: "merchant_settlement_delay",
+      reason_codes: ["merchant_settlement"]
+    };
+  }
+  if (containsAny(text, AGENT_CASH_IN_KEYWORDS)) {
+    return { case_type: "agent_cash_in_issue", reason_codes: ["agent_cash_in"] };
   }
   if (containsAny(text, REFUND_REQUEST_KEYWORDS)) {
     return { case_type: "refund_request", reason_codes: ["refund_request"] };
@@ -100,7 +94,8 @@ export const isKnownTransactionTypeForCase = (
     case "agent_cash_in_issue":
       return transaction.type === "cash_in";
     case "phishing_or_social_engineering":
+      return false;
     case "other":
-      return true;
+      return false;
   }
 };

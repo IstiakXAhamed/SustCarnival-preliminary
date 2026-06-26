@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AnalyzeTicketService } from "../src/analyze-ticket/analyze-ticket.service";
+import { ensureSafeText } from "../src/safety/safety-checker";
 import { sampleCases } from "./sample-cases";
 
 const unsafeReplyPattern = /(?<!do not\s+|never\s+|don't\s+|কখনো\s+|কখনোই\s+|শেয়ার\s+করবেন\s+)\b(share|send|provide|give|tell|enter|input|write|verify|confirm) your (pin|otp|password|credential|credentials|secret)\b/i;
@@ -147,7 +148,6 @@ describe("AnalyzeTicketService", () => {
   // Test Robust Safety Filters
   it("flags replies requesting credentials as unsafe and applies fallback", () => {
     // We simulate a potential unsafe string generated or intercepted
-    const { ensureSafeText } = require("../src/safety/safety-checker");
     const unsafeText = "Please send your PIN or write your password for verification.";
     const safeResult = ensureSafeText(unsafeText);
 
@@ -156,7 +156,6 @@ describe("AnalyzeTicketService", () => {
   });
 
   it("flags replies in Bangla requesting credentials as unsafe", () => {
-    const { ensureSafeText } = require("../src/safety/safety-checker");
     const unsafeText = "অনুগ্রহ করে আপনার পিন নম্বরটি বলুন।";
     const safeResult = ensureSafeText(unsafeText);
 
@@ -175,5 +174,125 @@ describe("AnalyzeTicketService", () => {
 
     expect(response.customer_reply).not.toMatch(unsafeReplyPattern);
     expect(response.case_type).toBe("phishing_or_social_engineering");
+  });
+
+  it("classifies merchant refund request as refund_request, not merchant_settlement_delay", () => {
+    const response = service.analyze({
+      ticket_id: "TKT-MERCHANT-REFUND",
+      complaint: "I paid 2000 taka to a merchant and changed my mind. I want a refund.",
+      language: "en",
+      user_type: "merchant",
+      transaction_history: [
+        { transaction_id: "TXN-MR-1", timestamp: "2026-04-14T10:00:00Z", type: "payment", amount: 2000, counterparty: "MERCHANT-99", status: "completed" }
+      ]
+    });
+
+    expect(response.case_type).toBe("refund_request");
+    expect(response.department).toBe("customer_support");
+  });
+
+  it("classifies agent wrong transfer as wrong_transfer, not agent_cash_in_issue", () => {
+    const response = service.analyze({
+      ticket_id: "TKT-AGENT-WRONG",
+      complaint: "I sent money to the wrong number by mistake through an agent. Please reverse it.",
+      language: "en",
+      user_type: "agent",
+      transaction_history: [
+        { transaction_id: "TXN-AW-1", timestamp: "2026-04-14T10:00:00Z", type: "transfer", amount: 1500, counterparty: "+8801712001122", status: "completed" }
+      ]
+    });
+
+    expect(response.case_type).toBe("wrong_transfer");
+    expect(response.department).toBe("dispute_resolution");
+  });
+
+  it("does not classify 'settle' keyword as merchant_settlement_delay for non-merchant complaints", () => {
+    const response = service.analyze({
+      ticket_id: "TKT-SETTLE-GENERIC",
+      complaint: "Please settle my account issue. I want a refund for my payment.",
+      language: "en",
+      user_type: "customer",
+      transaction_history: [
+        { transaction_id: "TXN-SG-1", timestamp: "2026-04-14T10:00:00Z", type: "payment", amount: 800, counterparty: "MERCHANT-22", status: "completed" }
+      ]
+    });
+
+    expect(response.case_type).not.toBe("merchant_settlement_delay");
+    expect(response.case_type).toBe("refund_request");
+  });
+
+  it("routes wrong_transfer with insufficient_data as medium severity and no human review", () => {
+    const response = service.analyze({
+      ticket_id: "TKT-AMBIG-001",
+      complaint: "I sent 1000 to my brother yesterday but he didn't get it. Please check.",
+      language: "en",
+      transaction_history: [
+        { transaction_id: "TXN-A1", timestamp: "2026-04-13T11:20:00Z", type: "transfer", amount: 1000, counterparty: "+8801712001122", status: "completed" },
+        { transaction_id: "TXN-A2", timestamp: "2026-04-13T19:45:00Z", type: "transfer", amount: 1000, counterparty: "+8801812334455", status: "completed" },
+        { transaction_id: "TXN-A3", timestamp: "2026-04-13T20:10:00Z", type: "transfer", amount: 1000, counterparty: "+8801712001122", status: "failed" }
+      ]
+    });
+
+    expect(response.evidence_verdict).toBe("insufficient_data");
+    expect(response.case_type).toBe("wrong_transfer");
+    expect(response.severity).toBe("medium");
+    expect(response.human_review_required).toBe(false);
+  });
+
+  it("flags Bangla polite imperative credential requests using করবেন form", () => {
+    const unsafeText = "দয়া করে আপনার পিন শেয়ার করবেন।";
+    const safeResult = ensureSafeText(unsafeText);
+
+    expect(safeResult).not.toMatch(unsafeReplyPattern);
+    expect(safeResult).toContain("Please do not share your PIN or OTP");
+  });
+
+  it("flags Bangla promise text without relying on \\b word boundaries", () => {
+    const unsafeText = "আমরা আপনাকে টাকা ফেরত দিব।";
+    const safeResult = ensureSafeText(unsafeText);
+
+    expect(safeResult).not.toMatch(refundPromisePattern);
+    expect(safeResult).toContain("Please do not share your PIN or OTP");
+  });
+
+  it("flags English refund promise variations", () => {
+    const variations = [
+      "we will refund you",
+      "refund is approved",
+      "money will be returned to you",
+      "reversal is confirmed"
+    ];
+    for (const text of variations) {
+      const safeResult = ensureSafeText(text);
+      expect(safeResult).not.toMatch(refundPromisePattern);
+    }
+  });
+
+  it("routes payment_failed with insufficient_data as medium severity", () => {
+    const response = service.analyze({
+      ticket_id: "TKT-PF-INSUFF",
+      complaint: "My payment failed but I'm not sure which transaction.",
+      language: "en",
+      transaction_history: []
+    });
+
+    expect(response.case_type).toBe("payment_failed");
+    expect(response.evidence_verdict).toBe("insufficient_data");
+    expect(response.severity).toBe("medium");
+    expect(response.human_review_required).toBe(false);
+  });
+
+  it("routes duplicate_payment with insufficient_data as medium severity and no human review", () => {
+    const response = service.analyze({
+      ticket_id: "TKT-DUP-INSUFF",
+      complaint: "I was charged twice.",
+      language: "en",
+      transaction_history: []
+    });
+
+    expect(response.case_type).toBe("duplicate_payment");
+    expect(response.evidence_verdict).toBe("insufficient_data");
+    expect(response.severity).toBe("medium");
+    expect(response.human_review_required).toBe(false);
   });
 });

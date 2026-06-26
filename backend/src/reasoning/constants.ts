@@ -217,7 +217,6 @@ export const DUPLICATE_PAYMENT_KEYWORDS = [
 export const MERCHANT_SETTLEMENT_KEYWORDS = [
   "settlement",
   "settled",
-  "settle",
   "sales",
   "merchant settlement",
   "not settled",

@@ -9,7 +9,14 @@ import {
   buildNextAction
 } from "../safety/reply-templates";
 import { ensureSafeText } from "../safety/safety-checker";
-import type { AnalyzeTicketRequest, AnalyzeTicketResponse } from "../reasoning/types";
+import type {
+  AnalyzeTicketRequest,
+  AnalyzeTicketResponse,
+  Classification,
+  EvidenceVerdict,
+  Routing,
+  TransactionMatch
+} from "../reasoning/types";
 
 @Injectable()
 export class AnalyzeTicketService {
@@ -25,7 +32,8 @@ export class AnalyzeTicketService {
       const verdict = evaluateEvidence(
         classification.case_type,
         match,
-        transactions
+        transactions,
+        input.complaint
       );
       const routing = routeCase(
         classification.case_type,
@@ -52,11 +60,7 @@ export class AnalyzeTicketService {
         customer_reply: ensureSafeText(buildCustomerReply(replyInput)),
         human_review_required: routing.human_review_required,
         confidence: match.ambiguous ? 0.65 : confidenceFor(verdict),
-        reason_codes: [
-          ...classification.reason_codes,
-          ...match.reason_codes,
-          verdict
-        ]
+        reason_codes: buildReasonCodes(classification, match, verdict, routing)
       };
     } catch (error) {
       // Safe fallback response to prevent application crash or 5xx leaks
@@ -89,4 +93,29 @@ const confidenceFor = (verdict: string): number => {
     default:
       return 0.6;
   }
+};
+
+const buildReasonCodes = (
+  classification: Classification,
+  match: TransactionMatch,
+  verdict: EvidenceVerdict,
+  routing: Routing
+): readonly string[] => {
+  const codes: string[] = [classification.case_type];
+  if (match.transaction !== null) {
+    codes.push("transaction_match");
+  } else if (match.ambiguous) {
+    codes.push("ambiguous_match");
+  } else if (match.reason_codes.includes("duplicate_not_confirmed")) {
+    codes.push("duplicate_not_confirmed");
+  }
+  if (routing.human_review_required) {
+    codes.push("dispute_initiated");
+  }
+  if (verdict === "inconsistent") {
+    codes.push("evidence_inconsistent");
+  } else if (verdict === "insufficient_data") {
+    codes.push("insufficient_data");
+  }
+  return codes;
 };

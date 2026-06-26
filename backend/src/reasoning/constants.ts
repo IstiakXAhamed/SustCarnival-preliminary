@@ -56,8 +56,6 @@ export const WRONG_TRANSFER_KEYWORDS = [
   "mistake",
   "reverse it",
   "brother",
-  "didn't get",
-  "did not get",
   "incorrect number",
   "incorrect account",
   "incorrect person",

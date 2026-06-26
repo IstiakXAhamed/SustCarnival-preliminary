@@ -1,4 +1,4 @@
-import { sameCounterpartyCount } from "./text";
+import { containsAny, normalizeText, sameCounterpartyCount } from "./text";
 import type {
   CaseType,
   EvidenceVerdict,
@@ -6,10 +6,30 @@ import type {
   TransactionMatch
 } from "./types";
 
+const REFUND_NOT_RECEIVED_KEYWORDS = [
+  "never received my refund",
+  "did not get my refund",
+  "didn't get my refund",
+  "refund didn't arrive",
+  "refund did not arrive",
+  "no refund",
+  "where is my refund",
+  "promised to refund",
+  "you promised",
+  "said you refunded",
+  "see no refund",
+  "see nothing",
+  "refunded but i",
+  "টাকা ফেরত পাইনি",
+  "ফেরত পাইনি",
+  "রিফান্ড পাইনি"
+];
+
 export const evaluateEvidence = (
   caseType: CaseType,
   match: TransactionMatch,
-  transactions: readonly TransactionEntry[]
+  transactions: readonly TransactionEntry[],
+  complaint: string
 ): EvidenceVerdict => {
   if (caseType === "phishing_or_social_engineering") {
     return "insufficient_data";
@@ -19,7 +39,6 @@ export const evaluateEvidence = (
     if (match.transaction !== null) {
       return "consistent";
     }
-    // If no duplicate pair was found, check if there is at least one payment in the ledger
     const hasAnyPayment = transactions.some((t) => t.type === "payment");
     return hasAnyPayment ? "inconsistent" : "insufficient_data";
   }
@@ -31,7 +50,6 @@ export const evaluateEvidence = (
   const transaction = match.transaction;
   switch (caseType) {
     case "wrong_transfer":
-      // A wrong transfer dispute is only valid for successfully completed transfers
       if (transaction.status !== "completed") {
         return "inconsistent";
       }
@@ -41,6 +59,12 @@ export const evaluateEvidence = (
     case "payment_failed":
       return transaction.status === "failed" ? "consistent" : "inconsistent";
     case "refund_request":
+      if (containsAny(normalizeText(complaint), REFUND_NOT_RECEIVED_KEYWORDS)) {
+        const hasRefundTransaction = transactions.some(
+          (t) => t.type === "refund" || t.status === "reversed"
+        );
+        return hasRefundTransaction ? "consistent" : "insufficient_data";
+      }
       return transaction.status === "completed" ? "consistent" : "insufficient_data";
     case "merchant_settlement_delay":
     case "agent_cash_in_issue":

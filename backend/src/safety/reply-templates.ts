@@ -64,13 +64,31 @@ export const buildAgentSummary = (input: ReplyInput): string => {
   if (input.case_type === "phishing_or_social_engineering") {
     return "Customer reports a suspicious contact attempt (call/SMS) asking for credentials. Likely social engineering. Customer has not yet shared credentials. Escalate to fraud_risk immediately.";
   }
-  const amount =
-    input.transaction === null ? "" : ` ${input.transaction.amount} BDT`;
-  const tx =
-    input.transaction === null
-      ? "No single matching transaction was identified"
-      : `${input.transaction.transaction_id}${amount} (${input.transaction.type}, ${input.transaction.status})`;
-  return `${tx}. Case classified as ${input.case_type} with ${input.evidence_verdict} evidence.`;
+  if (input.transaction === null) {
+    if (input.evidence_verdict === "insufficient_data") {
+      return "Customer report could not be matched to a specific transaction from the provided history. Insufficient detail to identify the relevant transaction.";
+    }
+    return "No single matching transaction was identified from the provided history.";
+  }
+  const txn = input.transaction;
+  const amountBdt = `${txn.amount} BDT`;
+  const counterparty = txn.counterparty;
+  switch (input.case_type) {
+    case "wrong_transfer":
+      return `Customer reports sending ${amountBdt} via ${txn.transaction_id} to ${counterparty}, which they now believe was the wrong recipient. Recipient is unresponsive.`;
+    case "payment_failed":
+      return `Customer attempted a ${amountBdt} payment via ${txn.transaction_id} to ${counterparty} which ${txn.status === "failed" ? "failed" : "shows as " + txn.status}. Customer reports a possible balance deduction.`;
+    case "refund_request":
+      return `Customer requests refund of ${amountBdt} for ${txn.transaction_id} (payment to ${counterparty}, status: ${txn.status}).`;
+    case "duplicate_payment":
+      return `Customer reports duplicate payment of ${amountBdt} to ${counterparty}. Suspected duplicate transaction: ${txn.transaction_id}.`;
+    case "merchant_settlement_delay":
+      return `Merchant reports ${amountBdt} settlement (${txn.transaction_id}) is delayed. Settlement status: ${txn.status}.`;
+    case "agent_cash_in_issue":
+      return `Customer reports ${amountBdt} cash-in via ${counterparty} (${txn.transaction_id}) not reflected in balance. Transaction status: ${txn.status}.`;
+    case "other":
+      return `Customer references transaction ${txn.transaction_id} (${amountBdt}, ${txn.type}, ${txn.status}). Issue requires further clarification.`;
+  }
 };
 
 export const buildNextAction = (input: ReplyInput): string => {
@@ -78,25 +96,37 @@ export const buildNextAction = (input: ReplyInput): string => {
     return "Escalate to fraud_risk team immediately. Confirm to the customer that the company never asks for OTP, PIN, or passwords. Log the reported number for fraud pattern analysis.";
   }
   if (input.evidence_verdict === "insufficient_data") {
+    if (input.transaction === null) {
+      return "Ask the customer for the missing transaction details (transaction ID, amount, time) before initiating any financial action.";
+    }
     return "Ask for the missing transaction details before initiating any financial action.";
   }
   if (input.evidence_verdict === "inconsistent") {
     return "Flag for human review and verify the claim against transaction history before taking action.";
   }
+  const txnId = input.transaction?.transaction_id;
   switch (input.case_type) {
     case "wrong_transfer":
-      return "Verify the transaction details and initiate the wrong-transfer dispute workflow per policy.";
+      return txnId
+        ? `Verify ${txnId} details with the customer and initiate the wrong-transfer dispute workflow per policy.`
+        : "Verify the transaction details and initiate the wrong-transfer dispute workflow per policy.";
     case "payment_failed":
-      return "Investigate ledger status and initiate standard reversal flow only if the failed deduction is confirmed.";
+      return txnId
+        ? `Investigate ${txnId} ledger status and initiate standard reversal flow only if the failed deduction is confirmed.`
+        : "Investigate ledger status and initiate standard reversal flow only if the failed deduction is confirmed.";
     case "refund_request":
-      return "Explain that refund eligibility depends on merchant policy and guide the customer safely.";
+      return "Explain that refund eligibility depends on merchant policy and guide the customer to contact the merchant directly through official channels.";
     case "duplicate_payment":
-      return "Verify the duplicate with payments operations and the biller before any reversal.";
+      return txnId
+        ? `Verify the duplicate with payments operations and the biller before any reversal of ${txnId}.`
+        : "Verify the duplicate with payments operations and the biller before any reversal.";
     case "merchant_settlement_delay":
-      return "Route to merchant operations to verify settlement batch status and communicate an official update.";
+      return "Route to merchant operations to verify settlement batch status and communicate an official update to the merchant.";
     case "agent_cash_in_issue":
-      return "Route to agent operations to verify the pending cash-in and settlement state.";
+      return txnId
+        ? `Route to agent operations to verify the pending cash-in (${txnId}) and settlement state.`
+        : "Route to agent operations to verify the pending cash-in and settlement state.";
     case "other":
-      return "Ask the customer for specific transaction details and issue description.";
+      return "Ask the customer for specific transaction details and a short description of the issue.";
   }
 };

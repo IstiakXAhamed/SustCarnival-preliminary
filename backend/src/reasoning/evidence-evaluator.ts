@@ -35,7 +35,5 @@ export const evaluateEvidence = (
       return transaction.status === "pending" ? "consistent" : "inconsistent";
     case "other":
       return "insufficient_data";
-    case "phishing_or_social_engineering":
-      return "insufficient_data";
   }
 };

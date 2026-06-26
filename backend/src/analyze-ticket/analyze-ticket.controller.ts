@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, HttpCode, Post } from "@nestjs/common";
 import { AnalyzeTicketPipe } from "./analyze-ticket.pipe";
 import { AnalyzeTicketService } from "./analyze-ticket.service";
 import type {
@@ -11,6 +11,7 @@ export class AnalyzeTicketController {
   constructor(private readonly analyzeTicketService: AnalyzeTicketService) {}
 
   @Post()
+  @HttpCode(200)
   analyze(
     @Body(new AnalyzeTicketPipe()) request: AnalyzeTicketRequest
   ): AnalyzeTicketResponse {

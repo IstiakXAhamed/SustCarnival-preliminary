@@ -31,7 +31,7 @@ export const routeCase = (
     case "merchant_settlement_delay":
       return {
         department: "merchant_operations",
-        severity: highValue ? "high" : "medium",
+        severity: "medium",
         human_review_required: false
       };
     case "agent_cash_in_issue":
@@ -42,7 +42,7 @@ export const routeCase = (
       return {
         department: "customer_support",
         severity: "low",
-        human_review_required: ambiguous
+        human_review_required: false
       };
   }
 };

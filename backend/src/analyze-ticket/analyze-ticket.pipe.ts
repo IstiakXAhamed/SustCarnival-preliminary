@@ -13,7 +13,7 @@ export class AnalyzeTicketPipe
   transform(value: unknown): AnalyzeTicketRequest {
     const result = analyzeTicketSchema.safeParse(value);
     if (result.success) {
-      return result.data;
+      return result.data as AnalyzeTicketRequest;
     }
     throw toHttpException(result.error);
   }

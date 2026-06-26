@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node", "vitest/globals"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }

@@ -1,0 +1,114 @@
+{
+  "info": {
+    "name": "QueueStorm Investigator API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Analyze Ticket - Wrong Transfer (Sample 1)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_id\": \"TKT-001\",\n  \"complaint\": \"I sent 5000 taka to a wrong number around 2pm today. The number was supposed to be 01712345678 but I think I typed it wrong. The person isn't responding to my call. Please help me get my money back.\",\n  \"language\": \"en\",\n  \"channel\": \"in_app_chat\",\n  \"user_type\": \"customer\",\n  \"campaign_context\": \"boishakh_bonanza_day_1\",\n  \"transaction_history\": [\n    {\n      \"transaction_id\": \"TXN-9101\",\n      \"timestamp\": \"2026-04-14T14:08:22Z\",\n      \"type\": \"transfer\",\n      \"amount\": 5000,\n      \"counterparty\": \"+8801719876543\",\n      \"status\": \"completed\"\n    },\n    {\n      \"transaction_id\": \"TXN-9087\",\n      \"timestamp\": \"2026-04-13T18:12:00Z\",\n      \"type\": \"cash_in\",\n      \"amount\": 10000,\n      \"counterparty\": \"AGENT-512\",\n      \"status\": \"completed\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/analyze-ticket",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "analyze-ticket"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Analyze Ticket - Phishing Attempt (Sample 5)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_id\": \"TKT-005\",\n  \"complaint\": \"Someone called me saying they are from bKash and asked for my OTP. They said my account will be blocked if I don't share it. Is this real? I haven't shared anything yet.\",\n  \"language\": \"en\",\n  \"channel\": \"call_center\",\n  \"user_type\": \"customer\",\n  \"transaction_history\": []\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/analyze-ticket",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "analyze-ticket"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Analyze Ticket - Bangla Cash-in (Sample 7)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticket_id\": \"TKT-007\",\n  \"complaint\": \"আমি আজ সকালে এজেন্টের কাছে ২০০০ টাকা ক্যাশ ইন করেছি কিন্তু আমার ব্যালেন্সে টাকা আসেনি। এজেন্ট বলছে টাকা পাঠিয়েছে কিন্তু আমি দেখছি না।\",\n  \"language\": \"bn\",\n  \"channel\": \"call_center\",\n  \"user_type\": \"customer\",\n  \"transaction_history\": [\n    {\n      \"transaction_id\": \"TXN-9701\",\n      \"timestamp\": \"2026-04-14T09:30:00Z\",\n      \"type\": \"cash_in\",\n      \"amount\": 2000,\n      \"counterparty\": \"AGENT-318\",\n      \"status\": \"pending\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/analyze-ticket",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "analyze-ticket"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ]
+}

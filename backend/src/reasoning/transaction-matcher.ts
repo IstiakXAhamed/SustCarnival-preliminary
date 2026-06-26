@@ -35,9 +35,17 @@ const duplicatePayment = (
 const scoreTransaction = (
   transaction: TransactionEntry,
   caseType: CaseType,
-  amounts: readonly number[]
+  amounts: readonly number[],
+  normalizedComplaint: string
 ): number => {
   let score = 0;
+  
+  // Exact transaction ID matching gets the highest priority boost
+  const txIdLower = transaction.transaction_id.toLowerCase();
+  if (normalizedComplaint.includes(txIdLower)) {
+    score += 100;
+  }
+  
   if (amounts.includes(transaction.amount)) {
     score += 5;
   }
@@ -69,7 +77,7 @@ export const matchTransaction = (
   const scored = transactions
     .map((transaction) => ({
       transaction,
-      score: scoreTransaction(transaction, caseType, amounts)
+      score: scoreTransaction(transaction, caseType, amounts, text)
     }))
     .filter((entry) => entry.score > 0)
     .sort((left, right) => right.score - left.score);

@@ -1,4 +1,12 @@
 import { isPhishingComplaint } from "../safety/phishing-detector";
+import {
+  AGENT_CASH_IN_KEYWORDS,
+  DUPLICATE_PAYMENT_KEYWORDS,
+  MERCHANT_SETTLEMENT_KEYWORDS,
+  PAYMENT_FAILED_KEYWORDS,
+  REFUND_REQUEST_KEYWORDS,
+  WRONG_TRANSFER_KEYWORDS
+} from "./constants";
 import { containsAny, normalizeText } from "./text";
 import type {
   AnalyzeTicketRequest,
@@ -43,41 +51,34 @@ export const classifyCase = (input: AnalyzeTicketRequest): Classification => {
       reason_codes: ["phishing", "credential_protection"]
     };
   }
-  if (hasDuplicatePayment(transactions) || containsAny(text, ["twice", "duplicate", "deducted twice"])) {
+  if (
+    hasDuplicatePayment(transactions) ||
+    containsAny(text, DUPLICATE_PAYMENT_KEYWORDS)
+  ) {
     return { case_type: "duplicate_payment", reason_codes: ["duplicate_payment"] };
   }
   if (
     input.user_type === "merchant" ||
-    containsAny(text, ["settlement", "settled", "settle", "sales"])
+    containsAny(text, MERCHANT_SETTLEMENT_KEYWORDS)
   ) {
     return {
       case_type: "merchant_settlement_delay",
       reason_codes: ["merchant_settlement"]
     };
   }
-  if (containsAny(text, ["cash in", "cash-in", "agent", "ক্যাশ ইন", "এজেন্ট"])) {
+  if (
+    input.user_type === "agent" ||
+    containsAny(text, AGENT_CASH_IN_KEYWORDS)
+  ) {
     return { case_type: "agent_cash_in_issue", reason_codes: ["agent_cash_in"] };
   }
-  if (containsAny(text, ["failed", "balance deducted", "deducted", "recharge"])) {
+  if (containsAny(text, PAYMENT_FAILED_KEYWORDS)) {
     return { case_type: "payment_failed", reason_codes: ["payment_failed"] };
   }
-  if (
-    containsAny(text, [
-      "wrong number",
-      "wrong recipient",
-      "wrong person",
-      "wrong account",
-      "wrong send",
-      "wrong transfer",
-      "mistake",
-      "reverse it",
-      "brother",
-      "didn't get"
-    ])
-  ) {
+  if (containsAny(text, WRONG_TRANSFER_KEYWORDS)) {
     return { case_type: "wrong_transfer", reason_codes: ["wrong_transfer_claim"] };
   }
-  if (containsAny(text, ["refund", "money back", "changed my mind"])) {
+  if (containsAny(text, REFUND_REQUEST_KEYWORDS)) {
     return { case_type: "refund_request", reason_codes: ["refund_request"] };
   }
   return { case_type: "other", reason_codes: ["vague_or_other"] };

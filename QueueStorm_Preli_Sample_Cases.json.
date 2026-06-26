@@ -1,0 +1,45 @@
+{
+  "input": {
+    "ticket_id": "TKT-013",
+    "complaint": "আমি একবার বিদ্যুৎ বিল পরিশোধ করেছি কিন্তু দুইবার টাকা কেটে নেওয়া হয়েছে।",
+    "language": "bn",
+    "channel": "in_app_chat",
+    "user_type": "customer",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-13001",
+        "timestamp": "2026-04-15T09:10:20Z",
+        "type": "payment",
+        "amount": 850,
+        "counterparty": "DESCO",
+        "status": "completed"
+      },
+      {
+        "transaction_id": "TXN-13002",
+        "timestamp": "2026-04-15T09:10:32Z",
+        "type": "payment",
+        "amount": 850,
+        "counterparty": "DESCO",
+        "status": "completed"
+      }
+    ]
+  },
+  "expected_output": {
+    "ticket_id": "TKT-013",
+    "relevant_transaction_id": "TXN-13002",
+    "evidence_verdict": "consistent",
+    "case_type": "duplicate_payment",
+    "severity": "high",
+    "department": "payments_ops",
+    "agent_summary": "Customer reports duplicate payment of 850 BDT to DESCO. Suspected duplicate transaction: TXN-13002.",
+    "recommended_next_action": "Verify the duplicate with payments operations and the biller before any reversal of TXN-13002.",
+    "customer_reply": "আপনার লেনদেন TXN-13002 এর বিষয়ে আমরা অবগত হয়েছি। আমাদের দল বিষয়টি যাচাই করবে এবং অফিসিয়াল চ্যানেলে আপনাকে জানাবে। অনুগ্রহ করে কারো সাথে আপনার পিন বা ওটিপি শেয়ার করবেন না।",
+    "human_review_required": true,
+    "confidence": 0.9,
+    "reason_codes": [
+      "duplicate_payment",
+      "transaction_match",
+      "dispute_initiated"
+    ]
+  }
+}

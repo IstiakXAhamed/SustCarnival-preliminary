@@ -556,12 +556,40 @@ All other cases (clear match, consistent/inconsistent verdict) use rule template
 - **Strict timeouts:** Tier 1: 2.5s, Tier 2: 2.0s. Worst-case AI path: 4.5s (still under 5s full-credit tier). On timeout → rule fallback.
 - **No AI key set:** Service runs in pure rule-based mode. All tests pass without `GEMINI_API_KEY`.
 
+### Cost Reasoning
+
+The hybrid architecture is designed to minimize AI cost while maximizing quality:
+
+| Metric | Value | Cost Impact |
+|--------|-------|-------------|
+| AI call rate | ~30% of cases (only ambiguous/insufficient_data/other) | 70% of requests are free (rule-only) |
+| Tier 1 quota | 500 requests/day (free tier) | At 30% AI rate, supports ~1,666 total requests/day for free |
+| Tier 2 quota | 20 requests/day (free tier) | Fallback only — rarely hit if Tier 1 stays within 500 RPD |
+| Tokens per call | ~800 output tokens max (JSON mode) | Stays well under free-tier token limits |
+| Worst-case latency | 4.5s (both tiers timeout) | Still within 5s full-credit latency tier |
+
+**Cost strategy:**
+- **Free tier sufficient for judging:** The judge harness sends a bounded number of test cases. At 30% AI rate and 500 RPD, the service can handle ~1,666 judge requests/day without any cost.
+- **Tiered fallback minimizes waste:** If Tier 1 rate-limits, Tier 2 is tried. If both fail, rule templates are used — no retry loops, no wasted quota.
+- **AI is optional, not required:** If `GEMINI_API_KEY` is unset or all quota is exhausted, the service runs in pure rule-based mode with zero cost and still passes all 10 sample cases + 32 unit tests. This guarantees the service never fails due to AI quota.
+- **No GPU, no local models:** Pure API calls to Gemini free tier. Zero infrastructure cost.
+- **Team-owned key:** The team uses their own Google AI Studio API key (free tier). No paid API required. Key is rotated after evaluation per the security policy.
+
+### Assumptions
+
+- **Synthetic data only:** All complaint and transaction data in tests and samples is synthetic. No real customer data is used.
+- **Single ticket per request:** The API processes one ticket per `POST /analyze-ticket` call. Batch processing is not supported.
+- **Transaction history is authoritative:** The service trusts the `transaction_history` array provided in the request. It does not query any external ledger.
+- **Language detection via `language` field:** The service uses the `language` field (en/bn/mixed) to select reply language. It does not auto-detect language from the complaint text.
+- **AI is best-effort enhancement:** AI improves text quality for edge cases but is never required for schema correctness, safety, or routing decisions.
+- **Railway deployment:** The service is designed for Railway's dynamic PORT injection and 0.0.0.0 binding requirement. Docker fallback is provided for judges who prefer local deployment.
+
 ### Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `PORT` | No (default 8000) | Port to bind on 0.0.0.0 |
-| `GEMINI_API_KEY` | No (enables AI enrichment) | Google AI Studio API key. Set in Railway env vars. Never commit to repo. |
+| `PORT` | No (Railway injects automatically) | Port to bind on 0.0.0.0. Railway sets this to 8080. |
+| `GEMINI_API_KEY` | No (enables AI enrichment) | Google AI Studio API key. Without it, the service runs in pure rule-based mode (still fully functional). |
 
 ---
 

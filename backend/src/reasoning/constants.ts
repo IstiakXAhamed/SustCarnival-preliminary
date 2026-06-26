@@ -46,6 +46,7 @@ export const DEPARTMENT_VALUES = [
   "fraud_risk"
 ] as const;
 
+
 export const WRONG_TRANSFER_KEYWORDS = [
   "wrong number",
   "wrong recipient",

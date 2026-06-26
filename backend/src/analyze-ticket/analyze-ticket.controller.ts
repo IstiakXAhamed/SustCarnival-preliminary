@@ -15,9 +15,9 @@ export class AnalyzeTicketController {
 
   @Post()
   @HttpCode(200)
-  analyze(
+  async analyze(
     @Body(new AnalyzeTicketPipe()) request: AnalyzeTicketRequest
-  ): AnalyzeTicketResponse {
+  ): Promise<AnalyzeTicketResponse> {
     return this.analyzeTicketService.analyze(request);
   }
 }

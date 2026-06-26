@@ -26,10 +26,9 @@ const UNSAFE_PROMISE_PATTERNS = [
 ] as const;
 
 const UNSAFE_REQUEST_PATTERNS = [
-  // English credential requests — negative lookbehind allows safety warnings ("do not share your PIN")
+  // English credential requests — negative lookbehind allows safety warnings ("do not share your PIN", "never ask for your PIN")
   /(?<!do not\s+|never\s+|don't\s+|কখনো\s+|কখনোই\s+|শেয়ার\s+করবেন\s+)\b(share|send|provide|give|tell|enter|input|write|verify|confirm|ask for) your (pin|otp|password|credential|credentials|secret|card number)\b/i,
   /\bfull card number\b/i,
-  /\bask for your (pin|otp|password)\b/i,
   // \b word boundaries don't work with Bangla Unicode — use direct substring matching instead.
   // Two patterns catch both orders: credential→verb ("পিন বলুন") and verb→credential ("বলুন পিন").
   // Includes both direct imperative (করুন) and polite imperative (করবেন) forms.

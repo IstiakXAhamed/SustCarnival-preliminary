@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { AiEnrichmentService } from "../ai-enrichment/ai-enrichment.service";
 import { classifyCase } from "../reasoning/case-classifier";
 import { evaluateEvidence } from "../reasoning/evidence-evaluator";
 import { routeCase } from "../reasoning/routing";
@@ -20,7 +21,9 @@ import type {
 
 @Injectable()
 export class AnalyzeTicketService {
-  analyze(input: AnalyzeTicketRequest): AnalyzeTicketResponse {
+  private readonly aiEnrichment = new AiEnrichmentService();
+
+  async analyze(input: AnalyzeTicketRequest): Promise<AnalyzeTicketResponse> {
     try {
       const classification = classifyCase(input);
       const transactions = input.transaction_history ?? [];
@@ -41,12 +44,40 @@ export class AnalyzeTicketService {
         match.transaction,
         match.ambiguous
       );
+
       const replyInput = {
         request: input,
         case_type: classification.case_type,
         evidence_verdict: verdict,
-        transaction: match.transaction
+        transaction: match.transaction,
+        ambiguous: match.ambiguous,
+        transactions
       };
+
+      const ruleSummary = ensureSafeText(buildAgentSummary(replyInput));
+      const ruleNextAction = ensureSafeText(buildNextAction(replyInput));
+      const ruleReply = ensureSafeText(buildCustomerReply(replyInput));
+
+      let agentSummary = ruleSummary;
+      let recommendedNextAction = ruleNextAction;
+      let customerReply = ruleReply;
+
+      if (shouldEnrich(this.aiEnrichment, classification, match, verdict, transactions)) {
+        const aiResult = await this.aiEnrichment.enrich({
+          request: input,
+          case_type: classification.case_type,
+          evidence_verdict: verdict,
+          transaction: match.transaction,
+          ambiguous: match.ambiguous,
+          transactions,
+          routing
+        });
+        if (aiResult !== null) {
+          agentSummary = ensureSafeText(aiResult.agent_summary);
+          recommendedNextAction = ensureSafeText(aiResult.recommended_next_action);
+          customerReply = ensureSafeText(aiResult.customer_reply);
+        }
+      }
 
       return {
         ticket_id: input.ticket_id,
@@ -55,11 +86,11 @@ export class AnalyzeTicketService {
         case_type: classification.case_type,
         severity: routing.severity,
         department: routing.department,
-        agent_summary: ensureSafeText(buildAgentSummary(replyInput)),
-        recommended_next_action: ensureSafeText(buildNextAction(replyInput)),
-        customer_reply: ensureSafeText(buildCustomerReply(replyInput)),
+        agent_summary: agentSummary,
+        recommended_next_action: recommendedNextAction,
+        customer_reply: customerReply,
         human_review_required: routing.human_review_required,
-        confidence: match.ambiguous ? 0.65 : confidenceFor(verdict),
+        confidence: confidenceFor(classification.case_type, verdict, match.ambiguous),
         reason_codes: buildReasonCodes(classification, match, verdict, routing)
       };
     } catch (error) {
@@ -82,7 +113,39 @@ export class AnalyzeTicketService {
   }
 }
 
-const confidenceFor = (verdict: string): number => {
+const shouldEnrich = (
+  aiEnrichment: AiEnrichmentService,
+  classification: Classification,
+  match: TransactionMatch,
+  verdict: EvidenceVerdict,
+  transactions: readonly { readonly transaction_id: string }[]
+): boolean => {
+  if (!aiEnrichment.isEnabled()) {
+    return false;
+  }
+  if (match.ambiguous) {
+    return true;
+  }
+  if (verdict === "insufficient_data" && transactions.length > 0) {
+    return true;
+  }
+  if (classification.case_type === "other") {
+    return true;
+  }
+  return false;
+};
+
+const confidenceFor = (
+  caseType: string,
+  verdict: string,
+  ambiguous: boolean
+): number => {
+  if (ambiguous) {
+    return 0.65;
+  }
+  if (caseType === "phishing_or_social_engineering") {
+    return 0.95;
+  }
   switch (verdict) {
     case "consistent":
       return 0.9;
@@ -109,12 +172,15 @@ const buildReasonCodes = (
   } else if (match.reason_codes.includes("duplicate_not_confirmed")) {
     codes.push("duplicate_not_confirmed");
   }
+  if (match.ambiguous) {
+    codes.push("needs_clarification");
+  }
   if (routing.human_review_required) {
     codes.push("dispute_initiated");
   }
   if (verdict === "inconsistent") {
     codes.push("evidence_inconsistent");
-  } else if (verdict === "insufficient_data") {
+  } else if (verdict === "insufficient_data" && !match.ambiguous) {
     codes.push("insufficient_data");
   }
   return codes;

@@ -10,6 +10,8 @@ type ReplyInput = {
   readonly case_type: CaseType;
   readonly evidence_verdict: EvidenceVerdict;
   readonly transaction: TransactionEntry | null;
+  readonly ambiguous: boolean;
+  readonly transactions: readonly TransactionEntry[];
 };
 
 const txLabel = (transaction: TransactionEntry | null): string =>
@@ -26,6 +28,10 @@ const buildEnglishReply = (input: ReplyInput): string => {
   const label = txLabel(input.transaction);
   if (input.evidence_verdict === "inconsistent") {
     return `We have received your concern about ${label}. The available transaction information needs careful review before any action can be taken. Our team will check the details through official support channels. Please do not share your PIN or OTP with anyone.`;
+  }
+  if (input.ambiguous && input.case_type === "wrong_transfer") {
+    const count = input.transactions.length;
+    return `Thank you for reaching out. We see ${count} transaction${count > 1 ? "s" : ""} that may match your complaint. Could you share the recipient's number so we can identify the right transaction? Our dispute team will review once the correct transaction is confirmed. Please do not share your PIN or OTP with anyone.`;
   }
   switch (input.case_type) {
     case "wrong_transfer":
@@ -65,6 +71,12 @@ export const buildAgentSummary = (input: ReplyInput): string => {
     return "Customer reports a suspicious contact attempt (call/SMS) asking for credentials. Likely social engineering. Customer has not yet shared credentials. Escalate to fraud_risk immediately.";
   }
   if (input.transaction === null) {
+    if (input.ambiguous && input.transactions.length > 0) {
+      const count = input.transactions.length;
+      const amounts = [...new Set(input.transactions.map((t) => t.amount))];
+      const amountText = amounts.length === 1 ? `${amounts[0]} BDT` : "matching amounts";
+      return `Customer report could not be matched to a single transaction. ${count} transactions with ${amountText} exist in the history. Cannot determine which transaction the complaint refers to without additional detail from the customer.`;
+    }
     if (input.evidence_verdict === "insufficient_data") {
       return "Customer report could not be matched to a specific transaction from the provided history. Insufficient detail to identify the relevant transaction.";
     }
@@ -96,6 +108,9 @@ export const buildNextAction = (input: ReplyInput): string => {
     return "Escalate to fraud_risk team immediately. Confirm to the customer that the company never asks for OTP, PIN, or passwords. Log the reported number for fraud pattern analysis.";
   }
   if (input.evidence_verdict === "insufficient_data") {
+    if (input.ambiguous) {
+      return "Ask the customer for a disambiguating detail (such as the recipient's number or transaction ID) to identify the correct transaction. Do not initiate any dispute or financial action until the transaction is confirmed.";
+    }
     if (input.transaction === null) {
       return "Ask the customer for the missing transaction details (transaction ID, amount, time) before initiating any financial action.";
     }

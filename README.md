@@ -231,8 +231,10 @@ The architecture is a **hybrid rule + AI pipeline**: a deterministic rule engine
 └──────────────────────────────────────────────────────────────────────────────┘
                                │
                                ▼
-                    Returns to Judge Harness
+                     Returns to Judge Harness
 ```
+
+![QueueStorm Investigator Architecture](assets/Architecture.png)
 
 #### Request Processing Pipeline (Hybrid Rule + AI)
 

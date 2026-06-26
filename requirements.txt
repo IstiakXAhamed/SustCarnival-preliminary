@@ -1,0 +1,68 @@
+# QueueStorm Investigator — Dependency Requirements
+#
+# This project is a Node.js / NestJS / TypeScript backend.
+# The canonical dependency manifest is backend/package.json (npm/pnpm).
+# This file is a human-readable summary for judges and reproducibility.
+#
+# Install via:  cd backend && npm install --frozen-lockfile
+# (or pnpm install --frozen-lockfile if pnpm is available)
+
+# ----------------------------------------------------------------------------
+# Runtime / System Requirements
+# ----------------------------------------------------------------------------
+Node.js          >= 20          (tested on Node 22)
+npm              >= 10          (or pnpm >= 9)
+Docker Engine    >= 24          (for containerized fallback, optional)
+Runtime memory   512 MB minimum (under the 4 GB VM guidance)
+Runtime CPU      1 vCPU minimum (under the 2 vCPU guidance)
+Disk (image)     < 500 MB recommended, < 1 GB hard limit
+Network          Outbound HTTPS to generativelanguage.googleapis.com (only if GEMINI_API_KEY is set)
+
+# ----------------------------------------------------------------------------
+# Runtime Dependencies (production) — see backend/package.json
+# Used by the deployed service at runtime.
+# ----------------------------------------------------------------------------
+@nestjs/common              ^11.1.6      NestJS core framework (controllers, DI, pipes, filters)
+@nestjs/core                ^11.1.6      NestJS application bootstrap and module system
+@nestjs/platform-express    ^11.1.6      Express adapter for NestJS HTTP server
+reflect-metadata            ^0.2.2       Required by NestJS decorators and dependency injection
+rxjs                        ^7.8.2       Reactive extensions used internally by NestJS
+zod                         ^3.25.76     Schema validation for request/response contracts
+
+# ----------------------------------------------------------------------------
+# Development Dependencies — see backend/package.json
+# Only used for building, testing, and type-checking. Not shipped in runtime image.
+# ----------------------------------------------------------------------------
+@nestjs/cli                 ^11.0.10     NestJS CLI (build, watch mode)
+@nestjs/testing             ^11.1.6      NestJS test utilities for unit + E2E tests
+@types/express              ^5.0.3       TypeScript types for Express
+@types/node                 ^24.0.10     TypeScript types for Node.js runtime APIs (fetch, AbortController)
+@types/supertest            ^6.0.3       TypeScript types for Supertest HTTP assertions
+supertest                   ^7.1.4       HTTP endpoint testing for E2E specs
+typescript                  ^5.8.3       TypeScript compiler (tsc) for build and typecheck
+vitest                      ^3.2.4       Test runner for unit and E2E specs
+
+# ----------------------------------------------------------------------------
+# AI / External API Dependencies (optional, no package install needed)
+# ----------------------------------------------------------------------------
+# Google Gemini API   REST calls via native fetch (Node 20+ global)
+#                     No SDK install required — keeps the image small.
+#                     Endpoint: https://generativelanguage.googleapis.com/v1beta
+#                     Models used:
+#                       - gemini-3.1-flash-lite   (tier 1, primary)
+#                       - gemini-2.5-flash-lite   (tier 2, fallback)
+#                     Auth: GEMINI_API_KEY environment variable (never committed).
+
+# ----------------------------------------------------------------------------
+# Docker Base Image (for containerized fallback)
+# ----------------------------------------------------------------------------
+node:22-alpine              Node 22 runtime on Alpine Linux (multi-stage build)
+                            Production image size: ~291 MB (verified under 500 MB limit)
+
+# ----------------------------------------------------------------------------
+# Environment Variables
+# ----------------------------------------------------------------------------
+PORT                        Port to bind on 0.0.0.0 (default 8000). Set by Railway or Docker.
+GEMINI_API_KEY              Google AI Studio API key. Optional — if unset, the service
+                            runs in pure rule-based mode with no AI enrichment.
+                            Set in Railway env vars or --env-file for Docker. Never commit.
